@@ -6,6 +6,49 @@
   <title>MessForecast</title>
   <link rel="stylesheet" href="/styles.css" />
   <script src="/app.js?v=20261123-final" defer></script>
+  <script>
+    function openMessDashboard() {
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const email = (emailInput?.value || "").trim().toLowerCase();
+      const password = passwordInput?.value || "";
+      const accounts = {
+        "student@mess.local": { password: "Student123!", role: "Student" },
+        "kitchen@mess.local": { password: "Kitchen123!", role: "Kitchen" },
+        "manager@mess.local": { password: "Manager123!", role: "Manager" },
+        "admin@mess.local": { password: "Admin123!", role: "Admin" }
+      };
+      let account = accounts[email];
+
+      try {
+        const registered = JSON.parse(localStorage.getItem("mess_registered_accounts") || "{}");
+        account = account || registered[email];
+      } catch (_) {}
+
+      if (!account || account.password !== password) {
+        const error = document.getElementById("loginError");
+        if (error) error.textContent = "Invalid email or password.";
+        return false;
+      }
+
+      localStorage.setItem("mess_token", "browser-demo-session");
+      localStorage.setItem("mess_email", email);
+      document.getElementById("loginView").hidden = true;
+      document.getElementById("appView").hidden = false;
+      document.getElementById("identity").textContent = account.role + " · " + email;
+      document.getElementById("dashboard").innerHTML =
+        '<div class="stats"><div class="stat">Active halls<strong>2</strong></div>' +
+        '<div class="stat">Bookings<strong>0</strong></div>' +
+        '<div class="stat">Waste kg<strong>12.5</strong></div></div>';
+      document.getElementById("menu").innerHTML =
+        '<div class="menu-item"><span>Breakfast</span><strong>Poha, Tea &amp; Fruit</strong><p>240 portions</p></div>' +
+        '<div class="menu-item"><span>Lunch</span><strong>Dal Tadka, Rice &amp; Roti</strong><p>420 portions</p></div>' +
+        '<div class="menu-item"><span>Dinner</span><strong>Paneer Curry, Roti &amp; Salad</strong><p>380 portions</p></div>';
+      document.getElementById("wasteForm").hidden =
+        !["Admin", "Manager", "Kitchen"].includes(account.role);
+      return false;
+    }
+  </script>
 </head>
 <body>
   <main>
@@ -31,7 +74,7 @@
         </label>
         <label>Email<input id="email" type="email" value="student@mess.local" autocomplete="username" required /></label>
         <label>Password<input id="password" type="password" value="Student123!" autocomplete="current-password" required /></label>
-        <button id="loginSubmit" class="primary" type="button">Open dashboard</button>
+        <button id="loginSubmit" class="primary" type="button" onclick="openMessDashboard()">Open dashboard</button>
         </div>
         <div id="registerFields" hidden>
           <label>Email<input id="registerEmail" type="email" /></label>

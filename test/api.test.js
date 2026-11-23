@@ -97,7 +97,7 @@ test("root UI exposes working script, demo role selector, and signup tab", async
     assert.match(html, /<script src="\/app\.js(?:\?[^"]*)?" defer><\/script>/);
     assert.match(html, /id="demoRole"/);
     assert.match(html, /Sign up/);
-    assert.match(html, /<button id="loginSubmit" class="primary" type="button">Open dashboard<\/button>/);
+    assert.match(html, /<button id="loginSubmit"[^>]*>Open dashboard<\/button>/);
 
     const script = await fetch(`http://127.0.0.1:${port}/public/app.js`);
     assert.equal(script.status, 200);
