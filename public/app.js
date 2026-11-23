@@ -165,7 +165,7 @@
     }
 
     window.openMessDashboard = openMessDashboard;
-    loginSubmit.addEventListener("click", openMessDashboard);
+    loginSubmit.removeEventListener("click", openMessDashboard);
     loginForm.addEventListener("submit", event => {
       openMessDashboard(event);
     });
