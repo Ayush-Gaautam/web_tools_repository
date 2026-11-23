@@ -40,7 +40,17 @@
     async function api(path, options = {}) {
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       if (token()) headers.Authorization = `Bearer ${token()}`;
-      const response = await fetch(path, { ...options, headers });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 15000);
+      let response;
+      try {
+        response = await fetch(path, { ...options, headers, signal: controller.signal });
+      } catch (error) {
+        if (error.name === "AbortError") throw new Error("Request timed out. Please try again.");
+        throw new Error("Cannot reach the server. Check your connection and redeploy status.");
+      } finally {
+        window.clearTimeout(timeout);
+      }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
       return data;
@@ -68,7 +78,12 @@
       storageSet("mess_email", data.email);
       loginView.hidden = true;
       appView.hidden = false;
-      await loadDashboard();
+      document.querySelector("#identity").textContent =
+        `${data.role || "User"} · ${data.email || storageGet("mess_email")}`;
+      loadDashboard().catch(error => {
+        document.querySelector("#actionStatus").textContent =
+          `Dashboard data could not refresh: ${error.message}`;
+      });
     }
 
     document.querySelector("#demoRole").addEventListener("change", event => {
