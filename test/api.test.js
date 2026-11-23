@@ -85,3 +85,27 @@ test("public registration creates a persistent in-memory student", async () => {
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+test("root UI exposes working script, demo role selector, and signup tab", async () => {
+  const server = app.listen(0);
+  await new Promise(resolve => server.once("listening", resolve));
+  const port = server.address().port;
+  try {
+    const page = await fetch(`http://127.0.0.1:${port}/`);
+    assert.equal(page.status, 200);
+    const html = await page.text();
+    assert.match(html, /<script src="\/app\.js" defer><\/script>/);
+    assert.match(html, /id="demoRole"/);
+    assert.match(html, /Sign up/);
+
+    const script = await fetch(`http://127.0.0.1:${port}/public/app.js`);
+    assert.equal(script.status, 200);
+    assert.match(script.headers.get("content-type"), /javascript/);
+
+    const rootScript = await fetch(`http://127.0.0.1:${port}/app.js`);
+    assert.equal(rootScript.status, 200);
+    assert.match(rootScript.headers.get("content-type"), /javascript/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});

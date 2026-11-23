@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MessForecast</title>
-  <link rel="stylesheet" href="/public/styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/app.js" defer></script>
 </head>
 <body>
   <main>
@@ -20,14 +21,22 @@
           <button id="registerTab" type="button" class="auth-tab">Sign up</button>
         </div>
         <div id="loginFields">
-        <label>Email<input id="email" type="email" value="student@mess.local" required /></label>
-        <label>Password<input id="password" type="password" value="Student123!" required /></label>
-        <button class="primary" type="submit">Open dashboard</button>
+        <label>Demo role
+          <select id="demoRole">
+            <option value="student@mess.local|Student123!">Student</option>
+            <option value="kitchen@mess.local|Kitchen123!">Kitchen</option>
+            <option value="manager@mess.local|Manager123!">Manager</option>
+            <option value="admin@mess.local|Admin123!">Admin</option>
+          </select>
+        </label>
+        <label>Email<input id="email" type="email" value="student@mess.local" autocomplete="username" required /></label>
+        <label>Password<input id="password" type="password" value="Student123!" autocomplete="current-password" required /></label>
+        <button id="loginSubmit" class="primary" type="submit">Open dashboard</button>
         </div>
         <div id="registerFields" hidden>
           <label>Email<input id="registerEmail" type="email" /></label>
           <label>Password<input id="registerPassword" type="password" minlength="8" /></label>
-          <button id="registerSubmit" class="primary" type="button">Create student account</button>
+          <button id="registerSubmit" class="primary" type="button">Create account</button>
         </div>
         <p id="loginError" class="error"></p>
         <details><summary>Demo accounts</summary>
@@ -61,6 +70,5 @@
       <p id="actionStatus" class="status"></p>
     </section>
   </main>
-  <script src="/public/app.js"></script>
 </body>
 </html>
