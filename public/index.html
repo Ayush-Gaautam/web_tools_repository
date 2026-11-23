@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MessForecast</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main>
+    <section id="loginView" class="shell login-shell">
+      <div class="intro">
+        <p class="eyebrow">Mess operations</p>
+        <h1>Plan meals.<br />Reduce waste.</h1>
+        <p>One workspace for booking, kitchen service and waste reporting.</p>
+      </div>
+      <form id="loginForm" class="card">
+        <h2>Sign in</h2>
+        <label>Email<input id="email" type="email" value="student@mess.local" required /></label>
+        <label>Password<input id="password" type="password" value="Student123!" required /></label>
+        <button class="primary" type="submit">Open dashboard</button>
+        <p id="loginError" class="error"></p>
+        <details><summary>Demo accounts</summary>
+          <table><tr><td>Student</td><td>student@mess.local</td><td>Student123!</td></tr><tr><td>Kitchen</td><td>kitchen@mess.local</td><td>Kitchen123!</td></tr><tr><td>Manager</td><td>manager@mess.local</td><td>Manager123!</td></tr><tr><td>Admin</td><td>admin@mess.local</td><td>Admin123!</td></tr></table>
+        </details>
+      </form>
+    </section>
+
+    <section id="appView" class="shell app-shell" hidden>
+      <header><strong>MessForecast</strong><span id="identity"></span><button id="logout" class="ghost">Sign out</button></header>
+      <div id="dashboard"></div>
+      <section class="card">
+        <h2>Today’s menu</h2>
+        <div id="menu" class="menu-grid"></div>
+      </section>
+      <section class="grid">
+        <form id="bookingForm" class="card">
+          <h2>Book a meal</h2>
+          <label>Dining hall<select id="hall"><option>North Hall</option><option>South Hall</option></select></label>
+          <label>Meal<select id="mealType"><option>Breakfast</option><option selected>Lunch</option><option>Dinner</option></select></label>
+          <button class="primary" type="submit">Confirm booking</button>
+        </form>
+        <form id="wasteForm" class="card" hidden>
+          <h2>Record waste</h2>
+          <label>Dish<input id="dish" value="Dal Tadka" /></label>
+          <label>Quantity kg<input id="quantity" type="number" min="0" step="0.1" value="5" /></label>
+          <label>Cost ₹<input id="cost" type="number" min="0" step="0.01" value="250" /></label>
+          <button class="primary" type="submit">Save record</button>
+        </form>
+      </section>
+      <p id="actionStatus" class="status"></p>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

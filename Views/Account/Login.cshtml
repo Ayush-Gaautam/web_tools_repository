@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Sign in";
+}
+<section class="login-card">
+    <div>
+        <p class="eyebrow">Mess operations</p>
+        <h1>Welcome back</h1>
+        <p>Sign in to manage forecasts, meals and waste.</p>
+    </div>
+    <form method="post" asp-action="Login">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+        <label>Email
+            <input name="email" type="email" value="student@mess.local" required />
+        </label>
+        <label>Password
+            <input name="password" type="password" value="Student123!" required />
+        </label>
+        <div asp-validation-summary="All" class="validation"></div>
+        <button class="primary" type="submit">Sign in</button>
+    </form>
+    <details>
+        <summary>Demo accounts</summary>
+        <table>
+            <tr><td>Admin</td><td>admin@mess.local</td><td>Admin123!</td></tr>
+            <tr><td>Manager</td><td>manager@mess.local</td><td>Manager123!</td></tr>
+            <tr><td>Kitchen</td><td>kitchen@mess.local</td><td>Kitchen123!</td></tr>
+            <tr><td>Student</td><td>student@mess.local</td><td>Student123!</td></tr>
+        </table>
+    </details>
+</section>
