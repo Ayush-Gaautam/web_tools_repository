@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<section>
+    <p class="eyebrow">Daily overview</p>
+    <h1>Mess dashboard</h1>
+    <p class="muted">Role: <strong>@ViewBag.RoleDashboard</strong></p>
+</section>
+<section class="stats">
+    <article><span>Active halls</span><strong>@ViewBag.Halls</strong></article>
+    <article><span>Today's bookings</span><strong>@ViewBag.TodayBookings</strong></article>
+    <article><span>Today's waste</span><strong>@ViewBag.TodayWaste kg</strong></article>
+</section>
+<section class="card">
+    <div class="card-heading"><h2>Today's menu</h2><a href="/Operations">Manage operations</a></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Hall</th><th>Meal</th><th>Dish</th><th>Prepared</th></tr></thead>
+            <tbody>
+            @foreach (var menu in ViewBag.Menus)
+            {
+                <tr><td>@menu.DiningHall.Name</td><td>@menu.MealType</td><td>@menu.DishName</td><td>@menu.PreparedQuantity</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

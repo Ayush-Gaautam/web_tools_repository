@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Operations";
+}
+<section><p class="eyebrow">Core operations</p><h1>Bookings, service & waste</h1></section>
+<div class="grid">
+    @if (User.IsInRole("Student") || User.IsInRole("Admin"))
+    {
+        <section class="card">
+            <h2>Book a meal</h2>
+            <form method="post" action="/Operations/Book">
+                @Html.AntiForgeryToken()
+                <label>Dining hall<select name="diningHallId">@foreach (var hall in ViewBag.Halls) { <option value="@hall.Id">@hall.Name</option> }</select></label>
+                <label>Meal<select name="mealType"><option>Breakfast</option><option selected>Lunch</option><option>Dinner</option></select></label>
+                <button class="primary" type="submit">Book meal</button>
+            </form>
+            <h3>My bookings</h3>
+            @foreach (var booking in ViewBag.MyBookings)
+            {
+                <div class="inline-row"><span>@booking.MealDate.ToString("dd MMM") · @booking.MealType · @booking.DiningHall.Name @(booking.IsCancelled ? "(cancelled)" : "")</span>
+                @if (!booking.IsCancelled) { <form method="post" action="/Operations/Cancel"><input type="hidden" name="id" value="@booking.Id" />@Html.AntiForgeryToken()<button class="danger" type="submit">Cancel</button></form> }</div>
+            }
+        </section>
+    }
+    @if (User.IsInRole("Kitchen") || User.IsInRole("Manager") || User.IsInRole("Admin"))
+    {
+        <section class="card">
+            <h2>Capture service</h2>
+            <form method="post" action="/Operations/Attendance">
+                @Html.AntiForgeryToken()
+                <label>Dining hall<select name="diningHallId">@foreach (var hall in ViewBag.Halls) { <option value="@hall.Id">@hall.Name</option> }</select></label>
+                <label>Meal<select name="mealType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option></select></label>
+                <label>Attendance<input name="count" type="number" min="0" value="250" required /></label>
+                <button class="primary" type="submit">Save attendance</button>
+            </form>
+        </section>
+        <section class="card">
+            <h2>Record waste</h2>
+            <form method="post" action="/Operations/Waste">
+                @Html.AntiForgeryToken()
+                <label>Dining hall<select name="diningHallId">@foreach (var hall in ViewBag.Halls) { <option value="@hall.Id">@hall.Name</option> }</select></label>
+                <label>Meal<select name="mealType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option></select></label>
+                <label>Dish<input name="dishName" value="Dal Tadka" required /></label>
+                <label>Quantity kg<input name="quantityKg" type="number" step="0.1" min="0" value="5" required /></label>
+                <label>Cost<input name="cost" type="number" step="0.01" min="0" value="250" required /></label>
+                <button class="primary" type="submit">Save waste</button>
+            </form>
+        </section>
+    }
+</div>
+<section class="card">
+    <h2>Recent waste</h2>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Hall</th><th>Meal</th><th>Dish</th><th>Kg</th><th>Cost</th></tr></thead><tbody>
+    @foreach (var record in ViewBag.Waste) { <tr><td>@record.RecordedAt.ToString("dd MMM")</td><td>@record.DiningHall.Name</td><td>@record.MealType</td><td>@record.DishName</td><td>@record.QuantityKg</td><td>₹@record.Cost</td></tr> }
+    </tbody></table></div>
+</section>

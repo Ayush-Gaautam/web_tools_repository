@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - MessForecast</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/">MessForecast</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/Operations">Operations</a>
+                @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                {
+                    <a href="/Admin">Admin</a>
+                }
+                <form method="post" action="/Account/Logout" class="logout-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit">Sign out</button>
+                </form>
+            </nav>
+        }
+    </header>
+    <main class="container">
+        @if (TempData["Success"] != null) { <div class="alert success">@TempData["Success"]</div> }
+        @if (TempData["Error"] != null) { <div class="alert error">@TempData["Error"]</div> }
+        @RenderBody()
+    </main>
+</body>
+</html>
