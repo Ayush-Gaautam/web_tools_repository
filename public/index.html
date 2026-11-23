@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MessForecast</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/public/styles.css" />
 </head>
 <body>
   <main>
@@ -15,10 +15,20 @@
         <p>One workspace for booking, kitchen service and waste reporting.</p>
       </div>
       <form id="loginForm" class="card">
-        <h2>Sign in</h2>
+        <div class="auth-tabs">
+          <button id="loginTab" type="button" class="auth-tab active">Sign in</button>
+          <button id="registerTab" type="button" class="auth-tab">Sign up</button>
+        </div>
+        <div id="loginFields">
         <label>Email<input id="email" type="email" value="student@mess.local" required /></label>
         <label>Password<input id="password" type="password" value="Student123!" required /></label>
         <button class="primary" type="submit">Open dashboard</button>
+        </div>
+        <div id="registerFields" hidden>
+          <label>Email<input id="registerEmail" type="email" /></label>
+          <label>Password<input id="registerPassword" type="password" minlength="8" /></label>
+          <button id="registerSubmit" class="primary" type="button">Create student account</button>
+        </div>
         <p id="loginError" class="error"></p>
         <details><summary>Demo accounts</summary>
           <table><tr><td>Student</td><td>student@mess.local</td><td>Student123!</td></tr><tr><td>Kitchen</td><td>kitchen@mess.local</td><td>Kitchen123!</td></tr><tr><td>Manager</td><td>manager@mess.local</td><td>Manager123!</td></tr><tr><td>Admin</td><td>admin@mess.local</td><td>Admin123!</td></tr></table>
@@ -51,6 +61,6 @@
       <p id="actionStatus" class="status"></p>
     </section>
   </main>
-  <script src="/app.js"></script>
+  <script src="/public/app.js"></script>
 </body>
 </html>

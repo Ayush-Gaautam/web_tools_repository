@@ -2,12 +2,26 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 app.use(express.json());
+const publicDirectory = path.resolve(__dirname, "..", "public");
+app.use("/public", express.static(publicDirectory));
+app.get("/", (_req, res) => {
+  res.type("html").send(fs.readFileSync(path.resolve(publicDirectory, "index.html"), "utf8"));
+});
 
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-const pool = databaseUrl ? new Pool({ connectionString: databaseUrl, ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false }) : null;
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === "production" || databaseUrl.includes("sslmode=require")
+        ? { rejectUnauthorized: false }
+        : false
+    })
+  : null;
 const jwtSecret = process.env.JWT_SECRET || "development-only-change-this-secret";
 
 const demoUsers = [
@@ -79,31 +93,111 @@ async function auth(req, res, next) {
   }
 }
 
-app.get("/api/health", async (_req, res) => {
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    mode: pool ? "postgres" : "memory",
+    databaseConfigured: Boolean(pool),
+    uptimeSeconds: Math.round(process.uptime())
+  });
+});
+
+app.get("/api/ready", async (_req, res) => {
   try {
-    if (pool) await pool.query("SELECT 1");
-    res.json({ status: "ok", database: pool ? "PostgreSQL" : "in-memory demo" });
+    if (pool) {
+      await ensureDatabase();
+      return res.status(200).json({ status: "ready", mode: "postgres", databaseConfigured: true });
+    }
+    await initMemory();
+    res.status(200).json({ status: "ready", mode: "memory", databaseConfigured: false });
   } catch (error) {
-    res.status(503).json({ status: "error", error: error.message });
+    res.status(503).json({ status: "not_ready", mode: "postgres", databaseConfigured: true, error: error.message });
   }
 });
 
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body || {};
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").trim();
+  if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+
   let user;
   if (pool) {
     await ensureDatabase();
-    const result = await pool.query("SELECT email, password_hash, role FROM mess_users WHERE email=$1", [email]);
+    const result = await pool.query(
+      "SELECT email, password_hash, role FROM mess_users WHERE LOWER(email)=LOWER($1)",
+      [email]
+    );
     user = result.rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ error: "Invalid email or password" });
+    const documentedDemo = demoUsers.find(x =>
+      x.email.toLowerCase() === email && x.password === password
+    );
+    if (!user && documentedDemo) {
+      const passwordHash = await bcrypt.hash(documentedDemo.password, 10);
+      const inserted = await pool.query(
+        `INSERT INTO mess_users(email,password_hash,role) VALUES($1,$2,$3)
+         ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash, role=EXCLUDED.role
+         RETURNING email,password_hash,role`,
+        [documentedDemo.email, passwordHash, documentedDemo.role]
+      );
+      user = inserted.rows[0];
+    }
+    if (!user) return res.status(401).json({ error: "Invalid email or password" });
+    if (!documentedDemo && !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
   } else {
     await initMemory();
-    user = memoryUsers.find(x => x.email === email);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: "Invalid email or password" });
+    user = memoryUsers.find(x => x.email.toLowerCase() === email);
+    const documentedDemo = demoUsers.find(x =>
+      x.email.toLowerCase() === email && x.password === password
+    );
+    if (!user && documentedDemo) {
+      user = {
+        email: documentedDemo.email,
+        passwordHash: await bcrypt.hash(documentedDemo.password, 10),
+        role: documentedDemo.role
+      };
+      memoryUsers.push(user);
+    }
+    if (!user) return res.status(401).json({ error: "Invalid email or password" });
+    if (!documentedDemo && !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
   }
   const role = user.role;
-  const token = jwt.sign({ email: user.email, role }, jwtSecret, { expiresIn: "8h" });
-  res.json({ token, email: user.email, role });
+  const token = jwt.sign({ email: String(user.email).toLowerCase(), role }, jwtSecret, { expiresIn: "8h" });
+  res.status(200).json({ token, email: String(user.email).toLowerCase(), role });
+});
+
+app.post("/api/register", async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+  if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+  if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  if (!email.includes("@")) return res.status(400).json({ error: "Enter a valid email address" });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  if (pool) {
+    await ensureDatabase();
+    const existing = await pool.query(
+      "SELECT id FROM mess_users WHERE LOWER(email)=LOWER($1)",
+      [email]
+    );
+    if (existing.rows.length) return res.status(409).json({ error: "An account with this email already exists" });
+    await pool.query(
+      "INSERT INTO mess_users(email,password_hash,role) VALUES($1,$2,$3)",
+      [email, passwordHash, "Student"]
+    );
+  } else {
+    await initMemory();
+    if (memoryUsers.some(x => x.email.toLowerCase() === email)) {
+      return res.status(409).json({ error: "An account with this email already exists" });
+    }
+    memoryUsers.push({ email, passwordHash, role: "Student" });
+  }
+
+  const token = jwt.sign({ email, role: "Student" }, jwtSecret, { expiresIn: "8h" });
+  res.status(201).json({ token, email, role: "Student" });
 });
 
 app.get("/api/dashboard", auth, async (req, res) => {
@@ -168,8 +262,6 @@ app.get("/api/waste", auth, async (_req, res) => {
   }
   res.json(memoryWaste);
 });
-
-app.get("/", (_req, res) => res.redirect("/public/index.html"));
 
 if (require.main === module) {
   const port = process.env.PORT || 3000;

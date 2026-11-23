@@ -22,8 +22,45 @@ async function loadDashboard() {
 
 loginForm.addEventListener("submit", async event => {
   event.preventDefault();
+  if (!document.querySelector("#loginFields").hidden) {
   try {
     const data = await api("/api/login", { method: "POST", body: JSON.stringify({ email: document.querySelector("#email").value, password: document.querySelector("#password").value }) });
+    localStorage.setItem("mess_token", data.token);
+    localStorage.setItem("mess_email", data.email);
+    loginView.hidden = true;
+    appView.hidden = false;
+    await loadDashboard();
+  } catch (error) {
+    document.querySelector("#loginError").textContent = error.message;
+  }
+  }
+});
+
+const loginTab = document.querySelector("#loginTab");
+const registerTab = document.querySelector("#registerTab");
+const loginFields = document.querySelector("#loginFields");
+const registerFields = document.querySelector("#registerFields");
+
+function showAuthTab(register) {
+  loginFields.hidden = register;
+  registerFields.hidden = !register;
+  loginTab.classList.toggle("active", !register);
+  registerTab.classList.toggle("active", register);
+  document.querySelector("#loginError").textContent = "";
+}
+
+loginTab.addEventListener("click", () => showAuthTab(false));
+registerTab.addEventListener("click", () => showAuthTab(true));
+
+document.querySelector("#registerSubmit").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/register", {
+      method: "POST",
+      body: JSON.stringify({
+        email: document.querySelector("#registerEmail").value,
+        password: document.querySelector("#registerPassword").value
+      })
+    });
     localStorage.setItem("mess_token", data.token);
     localStorage.setItem("mess_email", data.email);
     loginView.hidden = true;
