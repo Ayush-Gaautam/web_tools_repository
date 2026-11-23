@@ -116,21 +116,88 @@ app.get("/api/ready", async (_req, res) => {
 });
 
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body || {};
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "").trim();
+  if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+
   let user;
   if (pool) {
     await ensureDatabase();
-    const result = await pool.query("SELECT email, password_hash, role FROM mess_users WHERE email=$1", [email]);
+    const result = await pool.query(
+      "SELECT email, password_hash, role FROM mess_users WHERE LOWER(email)=LOWER($1)",
+      [email]
+    );
     user = result.rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ error: "Invalid email or password" });
+    const documentedDemo = demoUsers.find(x =>
+      x.email.toLowerCase() === email && x.password === password
+    );
+    if (!user && documentedDemo) {
+      const passwordHash = await bcrypt.hash(documentedDemo.password, 10);
+      const inserted = await pool.query(
+        `INSERT INTO mess_users(email,password_hash,role) VALUES($1,$2,$3)
+         ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash, role=EXCLUDED.role
+         RETURNING email,password_hash,role`,
+        [documentedDemo.email, passwordHash, documentedDemo.role]
+      );
+      user = inserted.rows[0];
+    }
+    if (!user) return res.status(401).json({ error: "Invalid email or password" });
+    if (!documentedDemo && !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
   } else {
     await initMemory();
-    user = memoryUsers.find(x => x.email === email);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: "Invalid email or password" });
+    user = memoryUsers.find(x => x.email.toLowerCase() === email);
+    const documentedDemo = demoUsers.find(x =>
+      x.email.toLowerCase() === email && x.password === password
+    );
+    if (!user && documentedDemo) {
+      user = {
+        email: documentedDemo.email,
+        passwordHash: await bcrypt.hash(documentedDemo.password, 10),
+        role: documentedDemo.role
+      };
+      memoryUsers.push(user);
+    }
+    if (!user) return res.status(401).json({ error: "Invalid email or password" });
+    if (!documentedDemo && !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
   }
   const role = user.role;
-  const token = jwt.sign({ email: user.email, role }, jwtSecret, { expiresIn: "8h" });
-  res.json({ token, email: user.email, role });
+  const token = jwt.sign({ email: String(user.email).toLowerCase(), role }, jwtSecret, { expiresIn: "8h" });
+  res.status(200).json({ token, email: String(user.email).toLowerCase(), role });
+});
+
+app.post("/api/register", async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+  if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+  if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+  if (!email.includes("@")) return res.status(400).json({ error: "Enter a valid email address" });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  if (pool) {
+    await ensureDatabase();
+    const existing = await pool.query(
+      "SELECT id FROM mess_users WHERE LOWER(email)=LOWER($1)",
+      [email]
+    );
+    if (existing.rows.length) return res.status(409).json({ error: "An account with this email already exists" });
+    await pool.query(
+      "INSERT INTO mess_users(email,password_hash,role) VALUES($1,$2,$3)",
+      [email, passwordHash, "Student"]
+    );
+  } else {
+    await initMemory();
+    if (memoryUsers.some(x => x.email.toLowerCase() === email)) {
+      return res.status(409).json({ error: "An account with this email already exists" });
+    }
+    memoryUsers.push({ email, passwordHash, role: "Student" });
+  }
+
+  const token = jwt.sign({ email, role: "Student" }, jwtSecret, { expiresIn: "8h" });
+  res.status(201).json({ token, email, role: "Student" });
 });
 
 app.get("/api/dashboard", auth, async (req, res) => {
