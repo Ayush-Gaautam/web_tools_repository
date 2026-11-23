@@ -2,12 +2,26 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool } = require("pg");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 app.use(express.json());
+const publicDirectory = path.resolve(__dirname, "..", "public");
+app.use("/public", express.static(publicDirectory));
+app.get("/", (_req, res) => {
+  res.type("html").send(fs.readFileSync(path.resolve(publicDirectory, "index.html"), "utf8"));
+});
 
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-const pool = databaseUrl ? new Pool({ connectionString: databaseUrl, ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false }) : null;
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === "production" || databaseUrl.includes("sslmode=require")
+        ? { rejectUnauthorized: false }
+        : false
+    })
+  : null;
 const jwtSecret = process.env.JWT_SECRET || "development-only-change-this-secret";
 
 const demoUsers = [
@@ -79,12 +93,25 @@ async function auth(req, res, next) {
   }
 }
 
-app.get("/api/health", async (_req, res) => {
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    mode: pool ? "postgres" : "memory",
+    databaseConfigured: Boolean(pool),
+    uptimeSeconds: Math.round(process.uptime())
+  });
+});
+
+app.get("/api/ready", async (_req, res) => {
   try {
-    if (pool) await pool.query("SELECT 1");
-    res.json({ status: "ok", database: pool ? "PostgreSQL" : "in-memory demo" });
+    if (pool) {
+      await ensureDatabase();
+      return res.status(200).json({ status: "ready", mode: "postgres", databaseConfigured: true });
+    }
+    await initMemory();
+    res.status(200).json({ status: "ready", mode: "memory", databaseConfigured: false });
   } catch (error) {
-    res.status(503).json({ status: "error", error: error.message });
+    res.status(503).json({ status: "not_ready", mode: "postgres", databaseConfigured: true, error: error.message });
   }
 });
 
@@ -168,8 +195,6 @@ app.get("/api/waste", auth, async (_req, res) => {
   }
   res.json(memoryWaste);
 });
-
-app.get("/", (_req, res) => res.redirect("/public/index.html"));
 
 if (require.main === module) {
   const port = process.env.PORT || 3000;
