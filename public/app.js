@@ -139,32 +139,34 @@
       document.querySelector("#password").value = password;
     });
 
-    loginForm.addEventListener("submit", async event => {
-      event.preventDefault();
-      if (!document.querySelector("#loginFields").hidden) {
-        loginSubmit.disabled = true;
-        loginSubmit.textContent = "Signing in...";
-        loginError.textContent = "";
-        try {
-          const email = document.querySelector("#email").value.trim().toLowerCase();
-          const password = document.querySelector("#password").value;
-          let data = localDemoLogin(email, password) ||
-            localRegisteredLogin(email, password);
-          if (!data) {
-            data = await api("/api/login", {
-              method: "POST",
-              body: JSON.stringify({ email, password })
-            });
-          }
-          await enterSession(data);
-        } catch (error) {
-          loginError.textContent = error.message;
-        } finally {
-          loginSubmit.disabled = false;
-          loginSubmit.textContent = "Open dashboard";
+    async function openMessDashboard(event) {
+      if (event) event.preventDefault();
+      loginSubmit.disabled = true;
+      loginSubmit.textContent = "Signing in...";
+      loginError.textContent = "";
+      try {
+        const email = document.querySelector("#email").value.trim().toLowerCase();
+        const password = document.querySelector("#password").value;
+        let data = localDemoLogin(email, password) ||
+          localRegisteredLogin(email, password);
+        if (!data) {
+          data = await api("/api/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password })
+          });
         }
+        await enterSession(data);
+      } catch (error) {
+        loginError.textContent = error.message;
+      } finally {
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = "Open dashboard";
       }
-    });
+    }
+
+    window.openMessDashboard = openMessDashboard;
+    loginSubmit.addEventListener("click", openMessDashboard);
+    loginForm.addEventListener("submit", openMessDashboard);
 
     const loginTab = document.querySelector("#loginTab");
     const registerTab = document.querySelector("#registerTab");
