@@ -9,6 +9,7 @@ const app = express();
 app.use(express.json());
 const publicDirectory = path.resolve(__dirname, "..", "public");
 app.use("/public", express.static(publicDirectory));
+app.use(express.static(publicDirectory));
 app.get("/", (_req, res) => {
   res.type("html").send(fs.readFileSync(path.resolve(publicDirectory, "index.html"), "utf8"));
 });
