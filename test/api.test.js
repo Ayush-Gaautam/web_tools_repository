@@ -94,7 +94,7 @@ test("root UI exposes working script, demo role selector, and signup tab", async
     const page = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(page.status, 200);
     const html = await page.text();
-    assert.match(html, /<script src="\/app\.js" defer><\/script>/);
+    assert.match(html, /<script src="\/app\.js(?:\?[^"]*)?" defer><\/script>/);
     assert.match(html, /id="demoRole"/);
     assert.match(html, /Sign up/);
 

@@ -96,7 +96,7 @@
       const account = demoCredentials[email];
       if (!account || account.password !== password) return null;
       return {
-        token: `demo-${account.role.toLowered?.() || account.role.toLowerCase()}`,
+        token: `demo-${account.role.toLowerCase()}`,
         email,
         role: account.role
       };
