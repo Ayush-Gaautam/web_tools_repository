@@ -166,7 +166,9 @@
 
     window.openMessDashboard = openMessDashboard;
     loginSubmit.addEventListener("click", openMessDashboard);
-    loginForm.addEventListener("submit", openMessDashboard);
+    loginForm.addEventListener("submit", event => {
+      openMessDashboard(event);
+    });
 
     const loginTab = document.querySelector("#loginTab");
     const registerTab = document.querySelector("#registerTab");
