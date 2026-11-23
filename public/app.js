@@ -148,17 +148,13 @@
         try {
           const email = document.querySelector("#email").value.trim().toLowerCase();
           const password = document.querySelector("#password").value;
-          let data = null;
-          try {
+          let data = localDemoLogin(email, password) ||
+            localRegisteredLogin(email, password);
+          if (!data) {
             data = await api("/api/login", {
               method: "POST",
               body: JSON.stringify({ email, password })
             });
-          } catch (apiError) {
-            data =
-              localDemoLogin(email, password) ||
-              localRegisteredLogin(email, password);
-            if (!data) throw apiError;
           }
           await enterSession(data);
         } catch (error) {
@@ -194,17 +190,16 @@
       try {
         const email = document.querySelector("#registerEmail").value.trim().toLowerCase();
         const password = document.querySelector("#registerPassword").value;
-        let data = null;
-        try {
-          data = await api("/api/register", {
-            method: "POST",
-            body: JSON.stringify({ email, password })
-          });
-        } catch (apiError) {
-          const result = localRegister(email, password);
-          if (result.error) throw new Error(result.error);
-          data = result;
-        }
+        if (!email.includes("@")) throw new Error("Enter a valid email address");
+        if (password.length < 8) throw new Error("Password must be at least 8 characters");
+        let data = localRegister(email, password);
+        if (data.error) throw new Error(data.error);
+        api("/api/register", {
+          method: "POST",
+          body: JSON.stringify({ email, password })
+        }).catch(() => {
+          // Local registration remains available when Vercel API is unavailable.
+        });
         await enterSession(data);
       } catch (error) {
         loginError.textContent = error.message;
