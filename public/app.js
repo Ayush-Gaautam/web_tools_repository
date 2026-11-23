@@ -1,5 +1,11 @@
 (() => {
   const memorySession = { token: "", email: "" };
+  const demoCredentials = {
+    "student@mess.local": { password: "Student123!", role: "Student" },
+    "kitchen@mess.local": { password: "Kitchen123!", role: "Kitchen" },
+    "manager@mess.local": { password: "Manager123!", role: "Manager" },
+    "admin@mess.local": { password: "Admin123!", role: "Admin" }
+  };
 
   function storageGet(key) {
     try {
@@ -86,6 +92,47 @@
       });
     }
 
+    function localDemoLogin(email, password) {
+      const account = demoCredentials[email];
+      if (!account || account.password !== password) return null;
+      return {
+        token: `demo-${account.role.toLowered?.() || account.role.toLowerCase()}`,
+        email,
+        role: account.role
+      };
+    }
+
+    function localRegister(email, password) {
+      let accounts = {};
+      try {
+        accounts = JSON.parse(window.localStorage?.getItem("mess_registered_accounts") || "{}");
+      } catch {
+        accounts = {};
+      }
+      const key = email.toLowerCase();
+      if (accounts[key]) return { error: "An account with this email already exists" };
+      accounts[key] = { password, role: "Student" };
+      try {
+        window.localStorage?.setItem("mess_registered_accounts", JSON.stringify(accounts));
+      } catch {
+        // The entered account still works for this browser session.
+      }
+      memorySession.email = key;
+      return { token: "demo-Student", email: key, role: "Student" };
+    }
+
+    function localRegisteredLogin(email, password) {
+      let accounts = {};
+      try {
+        accounts = JSON.parse(window.localStorage?.getItem("mess_registered_accounts") || "{}");
+      } catch {
+        accounts = {};
+      }
+      const account = accounts[email];
+      if (!account || account.password !== password) return null;
+      return { token: "demo-Student", email, role: account.role || "Student" };
+    }
+
     document.querySelector("#demoRole").addEventListener("change", event => {
       const [email, password] = event.target.value.split("|");
       document.querySelector("#email").value = email;
@@ -99,13 +146,20 @@
         loginSubmit.textContent = "Signing in...";
         loginError.textContent = "";
         try {
-          const data = await api("/api/login", {
-            method: "POST",
-            body: JSON.stringify({
-              email: document.querySelector("#email").value.trim(),
-              password: document.querySelector("#password").value
-            })
-          });
+          const email = document.querySelector("#email").value.trim().toLowerCase();
+          const password = document.querySelector("#password").value;
+          let data = null;
+          try {
+            data = await api("/api/login", {
+              method: "POST",
+              body: JSON.stringify({ email, password })
+            });
+          } catch (apiError) {
+            data =
+              localDemoLogin(email, password) ||
+              localRegisteredLogin(email, password);
+            if (!data) throw apiError;
+          }
           await enterSession(data);
         } catch (error) {
           loginError.textContent = error.message;
@@ -138,13 +192,19 @@
       registerSubmit.textContent = "Creating account...";
       loginError.textContent = "";
       try {
-        const data = await api("/api/register", {
-          method: "POST",
-          body: JSON.stringify({
-            email: document.querySelector("#registerEmail").value.trim(),
-            password: document.querySelector("#registerPassword").value
-          })
-        });
+        const email = document.querySelector("#registerEmail").value.trim().toLowerCase();
+        const password = document.querySelector("#registerPassword").value;
+        let data = null;
+        try {
+          data = await api("/api/register", {
+            method: "POST",
+            body: JSON.stringify({ email, password })
+          });
+        } catch (apiError) {
+          const result = localRegister(email, password);
+          if (result.error) throw new Error(result.error);
+          data = result;
+        }
         await enterSession(data);
       } catch (error) {
         loginError.textContent = error.message;
